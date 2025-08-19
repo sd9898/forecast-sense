@@ -3,7 +3,7 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { FileUpload } from '@/components/dashboard/FileUpload';
 import { InteractiveCalendar } from '@/components/dashboard/InteractiveCalendar';
 import { ResourcePredictionChart } from '@/components/dashboard/ResourcePredictionChart';
-import { ExternalEventsChart } from '@/components/dashboard/ExternalEventsChart';
+
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -14,16 +14,15 @@ import { useToast } from '@/hooks/use-toast';
 const Index = () => {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [predictionsData, setPredictionsData] = useState<any[]>([]);
-  const [eventsData, setEventsData] = useState<any[]>([]);
+  
   const [selectedDate, setSelectedDate] = useState<Date>();
   const { toast } = useToast();
 
-  const handleDataLoad = (predictions: any[], events: any[]) => {
+  const handleDataLoad = (predictions: any[]) => {
     setPredictionsData(predictions);
-    setEventsData(events);
     toast({
       title: "Data Loaded Successfully",
-      description: `Loaded ${predictions.length.toLocaleString()} predictions and ${events.length.toLocaleString()} events`,
+      description: `Loaded ${predictions.length.toLocaleString()} predictions`,
     });
   };
 
@@ -56,8 +55,8 @@ const Index = () => {
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    Upload your ML predictions CSV and external events CSV files to begin analysis.
-                    The system supports files up to 150MB with advanced correlation analysis.
+                    Upload your ML predictions CSV file to begin analysis.
+                    The system supports files up to 150MB with advanced analytics.
                   </AlertDescription>
                 </Alert>
 
@@ -80,9 +79,9 @@ const Index = () => {
 
                   <div className="p-4 border border-border rounded-lg">
                     <Activity className="h-8 w-8 text-chart-network mb-3" />
-                    <h3 className="font-semibold mb-2">Event Correlation</h3>
+                    <h3 className="font-semibold mb-2">Resource Monitoring</h3>
                     <p className="text-sm text-muted-foreground">
-                      Analyze impact of external events on system performance metrics
+                      Real-time monitoring of CPU, memory, network, and power consumption metrics
                     </p>
                   </div>
 
@@ -116,10 +115,6 @@ const Index = () => {
                   <Database className="h-3 w-3" />
                   {predictionsData.length.toLocaleString()} Predictions
                 </Badge>
-                <Badge variant="secondary" className="gap-1">
-                  <Activity className="h-3 w-3" />
-                  {eventsData.length.toLocaleString()} Events
-                </Badge>
               </div>
               <Button 
                 variant="outline" 
@@ -145,11 +140,6 @@ const Index = () => {
               selectedDate={selectedDate}
             />
 
-            {/* External Events Chart */}
-            <ExternalEventsChart 
-              predictionsData={predictionsData}
-              eventsData={eventsData}
-            />
 
             {/* Performance Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

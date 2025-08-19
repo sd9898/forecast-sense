@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import Papa from 'papaparse';
 
 interface FileUploadProps {
-  onDataLoad: (predictions: any[], events: any[]) => void;
+  onDataLoad: (predictions: any[]) => void;
   onClose: () => void;
 }
 
@@ -22,20 +22,15 @@ interface FileStatus {
 
 export function FileUpload({ onDataLoad, onClose }: FileUploadProps) {
   const [predictionFile, setPredictionFile] = useState<FileStatus | null>(null);
-  const [eventsFile, setEventsFile] = useState<FileStatus | null>(null);
 
-  const processFile = useCallback(async (file: File, type: 'predictions' | 'events') => {
+  const processFile = useCallback(async (file: File) => {
     const fileStatus: FileStatus = {
       name: file.name,
       status: 'uploading',
       progress: 0
     };
 
-    if (type === 'predictions') {
-      setPredictionFile(fileStatus);
-    } else {
-      setEventsFile(fileStatus);
-    }
+    setPredictionFile(fileStatus);
 
     return new Promise<any[]>((resolve, reject) => {
       Papa.parse(file, {
@@ -50,11 +45,7 @@ export function FileUpload({ onDataLoad, onClose }: FileUploadProps) {
               error: results.errors[0].message
             };
             
-            if (type === 'predictions') {
-              setPredictionFile(errorStatus);
-            } else {
-              setEventsFile(errorStatus);
-            }
+            setPredictionFile(errorStatus);
             reject(new Error(results.errors[0].message));
             return;
           }
@@ -66,11 +57,7 @@ export function FileUpload({ onDataLoad, onClose }: FileUploadProps) {
             data: results.data
           };
 
-          if (type === 'predictions') {
-            setPredictionFile(completeStatus);
-          } else {
-            setEventsFile(completeStatus);
-          }
+          setPredictionFile(completeStatus);
 
           resolve(results.data);
         },
@@ -81,11 +68,7 @@ export function FileUpload({ onDataLoad, onClose }: FileUploadProps) {
             error: error.message
           };
           
-          if (type === 'predictions') {
-            setPredictionFile(errorStatus);
-          } else {
-            setEventsFile(errorStatus);
-          }
+          setPredictionFile(errorStatus);
           reject(error);
         }
       });
@@ -96,20 +79,9 @@ export function FileUpload({ onDataLoad, onClose }: FileUploadProps) {
     const file = acceptedFiles[0];
     if (file) {
       try {
-        await processFile(file, 'predictions');
+        await processFile(file);
       } catch (error) {
         console.error('Error processing predictions file:', error);
-      }
-    }
-  }, [processFile]);
-
-  const onEventsDrop = useCallback(async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (file) {
-      try {
-        await processFile(file, 'events');
-      } catch (error) {
-        console.error('Error processing events file:', error);
       }
     }
   }, [processFile]);
@@ -126,26 +98,15 @@ export function FileUpload({ onDataLoad, onClose }: FileUploadProps) {
     multiple: false
   });
 
-  const {
-    getRootProps: getEventsRootProps,
-    getInputProps: getEventsInputProps,
-    isDragActive: isEventsDragActive
-  } = useDropzone({
-    onDrop: onEventsDrop,
-    accept: {
-      'text/csv': ['.csv']
-    },
-    multiple: false
-  });
 
   const handleLoadData = () => {
-    if (predictionFile?.data && eventsFile?.data) {
-      onDataLoad(predictionFile.data, eventsFile.data);
+    if (predictionFile?.data) {
+      onDataLoad(predictionFile.data);
       onClose();
     }
   };
 
-  const canLoadData = predictionFile?.status === 'complete' && eventsFile?.status === 'complete';
+  const canLoadData = predictionFile?.status === 'complete';
 
   const FileStatusIndicator = ({ file }: { file: FileStatus | null }) => {
     if (!file) return null;
@@ -184,8 +145,8 @@ export function FileUpload({ onDataLoad, onClose }: FileUploadProps) {
         <Card className="p-6 shadow-dashboard">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold">Upload Data Files</h2>
-              <p className="text-muted-foreground">Upload your ML predictions and external events CSV files</p>
+              <h2 className="text-2xl font-bold">Upload Data File</h2>
+              <p className="text-muted-foreground">Upload your ML predictions CSV file</p>
             </div>
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="h-4 w-4" />
@@ -216,28 +177,6 @@ export function FileUpload({ onDataLoad, onClose }: FileUploadProps) {
               <FileStatusIndicator file={predictionFile} />
             </div>
 
-            {/* Events File Upload */}
-            <div>
-              <h3 className="text-lg font-semibold mb-2">External Events Data</h3>
-              <div
-                {...getEventsRootProps()}
-                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                  isEventsDragActive 
-                    ? 'border-primary bg-primary/10' 
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <input {...getEventsInputProps()} />
-                <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium mb-2">
-                  {isEventsDragActive ? 'Drop the events file here' : 'Upload Events CSV'}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  CSV file with external events (floods, earthquakes, economic events, etc.)
-                </p>
-              </div>
-              <FileStatusIndicator file={eventsFile} />
-            </div>
 
             {/* Load Data Button */}
             <div className="flex justify-end gap-3 pt-4 border-t">
