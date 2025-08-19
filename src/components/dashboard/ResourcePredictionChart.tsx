@@ -31,54 +31,44 @@ export function ResourcePredictionChart({ data, selectedDate }: ResourcePredicti
   });
   const [chartType, setChartType] = useState<'line' | 'area'>('line');
 
-  // Process data for monthly aggregation
+  // Process data for daily display
   const processedData = React.useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    // Group by month and calculate averages
-    const monthlyData = new Map();
-    
-    data.forEach(item => {
-      if (!item.timestamp) return;
+    return data.map((item, index) => {
+      const timestamp = item.timestamp ? new Date(item.timestamp) : new Date(2025, 0, index + 1);
       
-      const date = new Date(item.timestamp);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      
-      if (!monthlyData.has(monthKey)) {
-        monthlyData.set(monthKey, {
-          month: monthKey,
-          date: date,
-          cpu_usage: [],
-          memory_usage: [],
-          network_traffic: [],
-          power_consumption: [],
-          cpu_growth: [],
-          memory_growth: [],
-          network_growth: []
-        });
-      }
-      
-      const monthData = monthlyData.get(monthKey);
-      if (item.cpu_usage !== undefined) monthData.cpu_usage.push(parseFloat(item.cpu_usage) || 0);
-      if (item.memory_usage !== undefined) monthData.memory_usage.push(parseFloat(item.memory_usage) || 0);
-      if (item.network_traffic !== undefined) monthData.network_traffic.push(parseFloat(item.network_traffic) || 0);
-      if (item.power_consumption !== undefined) monthData.power_consumption.push(parseFloat(item.power_consumption) || 0);
-      if (item.cpu_usage_growth_pct !== undefined) monthData.cpu_growth.push(parseFloat(item.cpu_usage_growth_pct) || 0);
-      if (item.memory_usage_growth_pct !== undefined) monthData.memory_growth.push(parseFloat(item.memory_usage_growth_pct) || 0);
-      if (item.network_traffic_growth_pct !== undefined) monthData.network_growth.push(parseFloat(item.network_traffic_growth_pct) || 0);
-    });
+      // Calculate growth rates compared to previous day
+      let cpuGrowth = 0;
+      let memoryGrowth = 0;
+      let networkGrowth = 0;
 
-    // Calculate averages for each month
-    return Array.from(monthlyData.values()).map(monthData => ({
-      month: monthData.month,
-      cpu_avg: monthData.cpu_usage.reduce((sum, val) => sum + val, 0) / monthData.cpu_usage.length || 0,
-      memory_avg: monthData.memory_usage.reduce((sum, val) => sum + val, 0) / monthData.memory_usage.length || 0,
-      network_avg: monthData.network_traffic.reduce((sum, val) => sum + val, 0) / monthData.network_traffic.length || 0,
-      power_avg: monthData.power_consumption.reduce((sum, val) => sum + val, 0) / monthData.power_consumption.length || 0,
-      cpu_growth: monthData.cpu_growth.reduce((sum, val) => sum + val, 0) / monthData.cpu_growth.length || 0,
-      memory_growth: monthData.memory_growth.reduce((sum, val) => sum + val, 0) / monthData.memory_growth.length || 0,
-      network_growth: monthData.network_growth.reduce((sum, val) => sum + val, 0) / monthData.network_growth.length || 0,
-    })).sort((a, b) => a.month.localeCompare(b.month));
+      if (index > 0) {
+        const prevItem = data[index - 1];
+        const prevCpu = prevItem.cpu_usage || 0;
+        const prevMemory = prevItem.memory_usage || 0;
+        const prevNetwork = prevItem.network_traffic || 0;
+        const currentCpu = item.cpu_usage || 0;
+        const currentMemory = item.memory_usage || 0;
+        const currentNetwork = item.network_traffic || 0;
+
+        cpuGrowth = prevCpu > 0 ? ((currentCpu - prevCpu) / prevCpu) * 100 : 0;
+        memoryGrowth = prevMemory > 0 ? ((currentMemory - prevMemory) / prevMemory) * 100 : 0;
+        networkGrowth = prevNetwork > 0 ? ((currentNetwork - prevNetwork) / prevNetwork) * 100 : 0;
+      }
+
+      return {
+        date: timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        fullDate: timestamp,
+        cpu_avg: parseFloat((item.cpu_usage || 0).toFixed(2)),
+        memory_avg: parseFloat((item.memory_usage || 0).toFixed(2)),
+        network_avg: parseFloat((item.network_traffic || 0).toFixed(2)),
+        power_avg: parseFloat((item.power_consumption || 0).toFixed(2)),
+        cpu_growth: parseFloat(cpuGrowth.toFixed(2)),
+        memory_growth: parseFloat(memoryGrowth.toFixed(2)),
+        network_growth: parseFloat(networkGrowth.toFixed(2))
+      };
+    });
   }, [data]);
 
   const toggleMetric = (metric: keyof typeof selectedMetrics) => {
@@ -100,12 +90,22 @@ export function ResourcePredictionChart({ data, selectedDate }: ResourcePredicti
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const data = payload[0].payload;
       return (
         <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-          <p className="font-medium mb-2">{`Month: ${label}`}</p>
+          <p className="font-medium mb-2">{`Date: ${label}`}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {`${entry.name}: ${entry.value.toFixed(2)}${entry.name.includes('cpu') || entry.name.includes('memory') ? '%' : entry.name.includes('power') ? 'W' : 'MB/s'}`}
+              {entry.dataKey.includes('cpu') && data.cpu_growth !== 0 && (
+                <span className="ml-2 text-xs">({data.cpu_growth > 0 ? '+' : ''}{data.cpu_growth.toFixed(1)}%)</span>
+              )}
+              {entry.dataKey.includes('memory') && data.memory_growth !== 0 && (
+                <span className="ml-2 text-xs">({data.memory_growth > 0 ? '+' : ''}{data.memory_growth.toFixed(1)}%)</span>
+              )}
+              {entry.dataKey.includes('network') && data.network_growth !== 0 && (
+                <span className="ml-2 text-xs">({data.network_growth > 0 ? '+' : ''}{data.network_growth.toFixed(1)}%)</span>
+              )}
             </p>
           ))}
         </div>
@@ -123,7 +123,7 @@ export function ResourcePredictionChart({ data, selectedDate }: ResourcePredicti
         <div className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-primary" />
           <h3 className="text-lg font-semibold">System Resource Predictions</h3>
-          <Badge variant="outline" className="text-xs">Monthly Aggregated</Badge>
+          <Badge variant="outline" className="text-xs">Daily Analysis</Badge>
         </div>
         
         <div className="flex items-center gap-4">
@@ -165,9 +165,10 @@ export function ResourcePredictionChart({ data, selectedDate }: ResourcePredicti
           <ChartComponent data={processedData}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis 
-              dataKey="month" 
+              dataKey="date" 
               stroke="hsl(var(--muted-foreground))"
               fontSize={12}
+              interval="preserveStartEnd"
             />
             <YAxis 
               stroke="hsl(var(--muted-foreground))"
@@ -225,7 +226,7 @@ export function ResourcePredictionChart({ data, selectedDate }: ResourcePredicti
 
       {/* Growth Metrics */}
       <div className="mt-6 pt-6 border-t border-border">
-        <h4 className="text-sm font-medium mb-3">Average Monthly Growth Rates</h4>
+        <h4 className="text-sm font-medium mb-3">Latest Daily Growth Rates</h4>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {processedData.length > 0 && (
             <>

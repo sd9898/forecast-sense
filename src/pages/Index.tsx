@@ -3,6 +3,9 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { FileUpload } from '@/components/dashboard/FileUpload';
 import { InteractiveCalendar } from '@/components/dashboard/InteractiveCalendar';
 import { ResourcePredictionChart } from '@/components/dashboard/ResourcePredictionChart';
+import { DatabaseMetricsGrid } from '@/components/dashboard/DatabaseMetricsGrid';
+import { DatabaseCapacityChart } from '@/components/dashboard/DatabaseCapacityChart';
+import { MaintenancePredictions } from '@/components/dashboard/MaintenancePredictions';
 
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -108,23 +111,29 @@ const Index = () => {
         ) : (
           // Dashboard Content
           <>
-            {/* Data Status Bar */}
-            <div className="flex items-center justify-between p-4 bg-card/50 rounded-lg border">
-              <div className="flex items-center gap-4">
-                <Badge variant="default" className="gap-1">
-                  <Database className="h-3 w-3" />
-                  {predictionsData.length.toLocaleString()} Predictions
-                </Badge>
+            {/* Database Metrics Grid */}
+            <DatabaseMetricsGrid 
+              data={predictionsData}
+              selectedDate={selectedDate}
+            />
+
+            {/* Main Dashboard Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column - Database Capacity Chart */}
+              <div className="lg:col-span-2">
+                <DatabaseCapacityChart 
+                  data={predictionsData}
+                  selectedDate={selectedDate}
+                />
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowFileUpload(true)}
-                className="gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                Upload New Data
-              </Button>
+
+              {/* Right Column - Maintenance Predictions */}
+              <div className="lg:col-span-1">
+                <MaintenancePredictions 
+                  data={predictionsData}
+                  selectedDate={selectedDate}
+                />
+              </div>
             </div>
 
             {/* Calendar Section */}
@@ -140,33 +149,27 @@ const Index = () => {
               selectedDate={selectedDate}
             />
 
-
-            {/* Performance Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { title: 'Storage Growth', value: '+12.3%', trend: 'up', color: 'chart-cpu' },
-                { title: 'Index Efficiency', value: '94.2%', trend: 'stable', color: 'chart-memory' },
-                { title: 'Query Performance', value: '2.1ms', trend: 'down', color: 'chart-network' },
-                { title: 'Vacuum Schedule', value: 'On Track', trend: 'stable', color: 'chart-power' }
-              ].map((metric, index) => (
-                <Card key={index} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{metric.title}</p>
-                      <p className="text-2xl font-bold" style={{ color: `hsl(var(--${metric.color}))` }}>
-                        {metric.value}
-                      </p>
-                    </div>
-                    <TrendingUp 
-                      className={`h-6 w-6 ${
-                        metric.trend === 'up' ? 'text-success' : 
-                        metric.trend === 'down' ? 'text-destructive' : 
-                        'text-muted-foreground'
-                      }`} 
-                    />
-                  </div>
-                </Card>
-              ))}
+            {/* Data Status Bar */}
+            <div className="flex items-center justify-between p-4 bg-card/50 rounded-lg border">
+              <div className="flex items-center gap-4">
+                <Badge variant="default" className="gap-1">
+                  <Database className="h-3 w-3" />
+                  {predictionsData.length.toLocaleString()} Predictions Loaded
+                </Badge>
+                <Badge variant="outline" className="gap-1">
+                  <Activity className="h-3 w-3" />
+                  Daily Analysis Active
+                </Badge>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowFileUpload(true)}
+                className="gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Upload New Data
+              </Button>
             </div>
           </>
         )}
